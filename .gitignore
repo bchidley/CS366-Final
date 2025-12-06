@@ -2,8 +2,3 @@
 venv/                 # Your Python virtual environment
 __pycache__/          # Python cache files
 
-# SAM 2 and Large Files
-sam2/                 # The entire SAM 2 source code repository
-video_frames/         # The extracted 512x512 frames (too large to commit)
-labels/               # The resulting segmentation masks (too large to commit)
-*.pt                  # Any checkpoint files you may accidentally download (like the one you rm'd earlier)
