@@ -24,7 +24,6 @@ with torch.amp.autocast(device_type='cuda', dtype=torch.float16):
     # Prompt the model with text
     output = processor.set_text_prompt(state=inference_state, prompt="car")
 
-# --- CUSTOM DRAWING CODE STARTS HERE ---
 
 # 1. Setup the plot
 plt.figure(figsize=(10, 10))
