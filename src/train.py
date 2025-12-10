@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -12,8 +13,10 @@ import matplotlib.pyplot as plt
 from data import ParkingDataset, get_transforms
 from model import ResNetCounter
 
+
 # --- HYPERPARAMETERS ---
-CSV_FILE = '/home/bchidley/CS366-Final/labels/car_counts.csv' # Check this path!
+CSV_FILE = '/home/bchidley/CS366-Final/labels/car_counts.csv'
+IMAGE_DIR = '/home/bchidley/CS366-Final/gpu_data/final'
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-4
 EPOCHS = 15
@@ -49,7 +52,7 @@ def main():
     print(f"Using device: {device}")
 
     # 2. Prepare Data
-    full_dataset = ParkingDataset(csv_file=CSV_FILE, transform=get_transforms())
+    full_dataset = ParkingDataset(csv_file=CSV_FILE, img_dir=IMAGE_DIR, transform=get_transforms())
     
     # Split: 80% Train, 20% Validation
     train_size = int(0.8 * len(full_dataset))
