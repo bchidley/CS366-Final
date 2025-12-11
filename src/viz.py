@@ -21,10 +21,10 @@ from torch.utils.data import DataLoader, random_split
 
 from data import ParkingDataset, get_transforms, MEAN, STD
 from model import ResNetCounter
-from train import CSV_FILE, IMAGE_DIR  # reuse your existing paths
+from train import CSV_FILE, IMAGE_DIR, MASK_DIR  #re use our existing paths
 
 
-# ---- CONFIG ----
+# -CONFIG-
 CHECKPOINT_PATH = "resnet50_parking_best.pth"
 OUT_DIR = "outputs/samples"
 NUM_SAMPLES = 12
@@ -69,7 +69,7 @@ def add_prediction_text(
         f"|Error|:               {abs_error:.0f}"
     )
 
-    # Compute text bounding box so we can draw a background rectangle
+    #compute text bounding box so we can draw a background rectangle
     margin = 10
     bbox = draw.multiline_textbbox((margin, margin), text)
     x0, y0, x1, y1 = bbox
@@ -108,8 +108,10 @@ def build_val_loader() -> DataLoader:
     full_dataset = ParkingDataset(
         csv_file=CSV_FILE,
         img_dir=IMAGE_DIR,
+        mask_dir=MASK_DIR,
         transform=get_transforms(),
     )
+
 
     val_size = int(VAL_SPLIT_RATIO * len(full_dataset))
     train_size = len(full_dataset) - val_size
@@ -127,9 +129,8 @@ def build_val_loader() -> DataLoader:
 
 
 def load_model(device: torch.device) -> ResNetCounter:
-    """
-    Initialize ResNetCounter and load weights from checkpoint.
-    """
+    #initialize ResNetCounter and load weights from checkpoint
+
     model = ResNetCounter().to(device)
 
     state_dict = torch.load(CHECKPOINT_PATH, map_location=device)
@@ -139,13 +140,13 @@ def load_model(device: torch.device) -> ResNetCounter:
 
 
 def main():
-    # Ensure output directory exists
+    # ensure output directory exists
     Path(OUT_DIR).mkdir(parents=True, exist_ok=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device for visualization: {device}")
 
-    # Load model
+    #Load our model
     if not os.path.exists(CHECKPOINT_PATH):
         raise FileNotFoundError(
             f"Checkpoint not found at '{CHECKPOINT_PATH}'. "
@@ -155,7 +156,7 @@ def main():
     model = load_model(device)
     print(f"Loaded model weights from: {CHECKPOINT_PATH}")
 
-    # Build validation loader
+    #validation loader
     val_loader = build_val_loader()
 
     saved = 0
@@ -164,20 +165,20 @@ def main():
             if saved >= NUM_SAMPLES:
                 break
 
-            # images: [1, 3, H, W]  targets: [1, 1]
+            #REFERENCE: images: [1, 3, H, W] //// targets: [1, 1]
             images = images.to(device)
             targets = targets.to(device)
 
-            outputs = model(images)  # [1, 1]
+            outputs = model(images)
             pred_value = float(outputs[0, 0].cpu().item())
             target_value = float(targets[0, 0].cpu().item())
 
-            # Convert to PIL
-            img_tensor = images[0].cpu()  # (3, H, W)
+            #to PIL
+            img_tensor = images[0].cpu()
             original_pil = tensor_to_pil(img_tensor)
             annotated_pil = add_prediction_text(original_pil, pred_value, target_value)
 
-            # Build panel and save
+            #make the pane
             panel = make_panel(original_pil, annotated_pil)
             out_path = os.path.join(OUT_DIR, f"sample_{saved:02d}.png")
             panel.save(out_path)
