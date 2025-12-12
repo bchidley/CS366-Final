@@ -10,7 +10,6 @@ import torch
 from PIL import Image
 import argparse
 import os
-import sys
 import pandas as pd
 
 # Import necessary components from your project folders
