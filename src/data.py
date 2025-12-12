@@ -1,3 +1,16 @@
+"""
+data.py
+Matt Hake, Ben Chidley, Garrett Keyhani, Josh Smith
+12/11/2025
+
+- Define ParkingDataset with image masking
+- Implement image loading with recursive file search
+- Pre-load masks for efficiency
+
+Sources:
+- PyTorch Dataset class: https://pytorch.org/tutorials/beginner/data_loading_tutorial.html
+- PIL Image masking: https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.composite
+"""
 import torch
 from torch.utils.data import Dataset
 from PIL import Image, ImageOps
@@ -33,7 +46,7 @@ class ParkingDataset(Dataset):
         self.mask_dir = mask_dir
         self.transform = transform 
         
-        # --- 1. PRE-LOAD MASKS ---
+        # Pre-Load Masks
         print("Loading and caching masks...")
         self.cached_masks = {}
         
@@ -53,7 +66,7 @@ class ParkingDataset(Dataset):
                 print(f"WARNING: Mask not found at {mask_path}. Will skip masking for {lot}.")
                 self.cached_masks[lot] = None
 
-        # --- 2. FILE FINDER (Recursive Scan) ---
+        # File Finder (Recursive Scan)
         print(f"Scanning {self.img_dir} (and subfolders)...")
         self.image_path_map = {}
         for root, dirs, files in os.walk(self.img_dir):
@@ -61,7 +74,7 @@ class ParkingDataset(Dataset):
                 if file.lower().endswith(('.png', '.jpg', '.jpeg')):
                     self.image_path_map[file] = os.path.join(root, file)
         
-        # --- 3. Match CSV to Disk ---
+        # Match CSV to Disk
         valid_indices = []
         self.valid_paths = [] 
         
@@ -96,7 +109,7 @@ class ParkingDataset(Dataset):
         img_path = self.valid_paths[idx]
         filename = os.path.basename(img_path)
         
-        # 1. Identify which lot this is
+        # Identify which lot this is
         current_lot = None
         total_capacity = 100
         for key, cap in LOT_CAPACITIES.items():
@@ -105,18 +118,18 @@ class ParkingDataset(Dataset):
                 total_capacity = cap
                 break
 
-        # 2. Get Labels
+        # Get Labels
         detected_cars = int(self.data_frame.iloc[idx]['Car_Count'])
         open_spots = max(0, total_capacity - detected_cars)
         target = torch.tensor([float(open_spots)], dtype=torch.float32)
 
-        # 3. Load Image
+        # Load Image
         try:
             image = Image.open(img_path).convert("RGB")
         except Exception:
             image = Image.new('RGB', (224, 224))
 
-        # --- APPLY RESIZE & MASK MANUALLY ---
+        # Apply Resize and Mask Manually
         image = image.resize((224, 224))
         
         if current_lot in self.cached_masks and self.cached_masks[current_lot] is not None:
@@ -126,7 +139,7 @@ class ParkingDataset(Dataset):
             # Composite the image onto black using the mask
             image = Image.composite(image, black_bg, mask)
 
-        # --- FINAL TRANSFORMS ---
+        # Final Transforms
         final_steps = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(mean=MEAN, std=STD)

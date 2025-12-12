@@ -1,3 +1,18 @@
+"""
+train.py
+Matt Hake, Ben Chidley, Garrett Keyhani, Josh Smith
+12/11/2025
+
+- Train ResNetCounter model on ParkingDataset with masks
+- Implement weighted MSE loss to prioritize zero open spot accuracy
+- Save best model checkpoint based on validation loss
+- Generate scatter plot of predicted vs actual open spots on validation set
+
+Sources:
+- PyTorch training loop patterns: https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
+- Weighted loss functions: https://discuss.pytorch.org/t/weighted-mse-loss/53079
+- Scatter plot with matplotlib: https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.scatter.html
+"""
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -9,12 +24,11 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import os
 
-# Import our custom modules
+# Import custom modules
 from data import ParkingDataset, get_transforms
 from model import ResNetCounter
 
-# --- HYPERPARAMETERS & PATHS ---
-# Using the partner's absolute paths as established
+# Hyperparameters and Paths
 CSV_FILE = '/home/bchidley/CS366-Final/labels/car_counts.csv'
 IMAGE_DIR = '/home/bchidley/CS366-Final/gpu_data/final'
 MASK_DIR = '/home/bchidley/CS366-Final/gpu_data/masks'
@@ -37,11 +51,11 @@ class WeightedMSELoss(nn.Module):
         return torch.mean(weighted_squared_error)
 
 def main():
-    # 1. Setup Device (GPU)
+    # Setup GPU
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    # 2. Prepare Data (Now with Masks!)
+    # Prepare Data (with masks)
     print("Initializing dataset...")
     full_dataset = ParkingDataset(
         csv_file=CSV_FILE, 
@@ -50,23 +64,23 @@ def main():
         transform=get_transforms()
     )
     
-    # Split: 80% Train, 20% Validation
+    # Split data into 80% Train, 20% Validation
     train_size = int(0.8 * len(full_dataset))
     val_size = len(full_dataset) - train_size
     train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
 
-    # num_workers=4 is good for Linux
+    # Set num_workers=4
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
     val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
 
-    # 3. Initialize Model
+    # Initialize Model
     model = ResNetCounter().to(device)
     
-    # 4. Loss and Optimizer
+    # Loss and Optimizer
     criterion = WeightedMSELoss(zero_weight=ZERO_SPOT_WEIGHT) 
     optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
 
-    # 5. Training Loop
+    # Training Loop
     best_val_loss = float('inf')
     epochs_no_improve = 0
     patience = 5
@@ -133,7 +147,7 @@ def main():
     torch.save(model.state_dict(), "resnet50_parking_final.pth")
     print("Training Complete. Generating Scatter Plot...")
     
-    # --- PLOTTING ---
+    # Plotting
     model.eval()
     all_preds = []
     all_targets = []
@@ -159,6 +173,6 @@ def main():
     plt.savefig('scatter_open_spots.png')
     print("Scatter plot saved as 'scatter_open_spots.png'")
 
-# --- CRITICAL ENTRY POINT ---
+
 if __name__ == "__main__":
     main()

@@ -1,3 +1,13 @@
+"""
+model.py
+Matt Hake, Ben Chidley, Garrett Keyhani, Josh Smith
+12/11/2025
+
+- Define ResNetCounter model based on pretrained ResNet50
+
+Sources:
+- PyTorch ResNet50 model: https://pytorch.org/vision/stable/models.html
+"""
 import torch
 import torch.nn as nn
 from torchvision import models
@@ -15,4 +25,3 @@ class ResNetCounter(nn.Module):
         )
     def forward(self, x):
         return self.backbone(x)
-

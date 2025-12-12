@@ -1,16 +1,17 @@
 """
 viz.py
+Matt Hake, Ben Chidley, Garrett Keyhani, Josh Smith
+12/11/2025
 
-- load trained ResNetCounter model from checkpoint
-- build a validation split of ParkingDataset
+- Load trained ResNetCounter model from checkpoint
+- Build a validation split of ParkingDataset
 - Run model to get predicted open spots
-- save side-by-side panels into outputs
+- Save side-by-side panels into outputs
 
-sources:
+Sources:
 - Pytorch vision normalization / denormalization pattern: https://pytorch.org/vision/stable/models.html
 - PIL ImageDraw text usage: https://pillow.readthedocs.io/en/stable/reference/ImageDraw.html
 """
-
 import os
 from pathlib import Path
 
@@ -21,8 +22,7 @@ from torch.utils.data import DataLoader, random_split
 
 from data import ParkingDataset, get_transforms, MEAN, STD
 from model import ResNetCounter
-from train import CSV_FILE, IMAGE_DIR, MASK_DIR  #re use our existing paths
-
+from train import CSV_FILE, IMAGE_DIR, MASK_DIR  # Reuse our existing paths
 
 # -CONFIG-
 CHECKPOINT_PATH = "resnet50_parking_best.pth"
@@ -31,7 +31,6 @@ NUM_SAMPLES = 12
 VAL_BATCH_SIZE = 1
 VAL_SPLIT_RATIO = 0.2
 RANDOM_SPLIT_SEED = 42
-
 
 def tensor_to_pil(img_tensor: torch.Tensor) -> Image.Image:
     """
@@ -69,7 +68,7 @@ def add_prediction_text(
         f"|Error|:               {abs_error:.0f}"
     )
 
-    #compute text bounding box so we can draw a background rectangle
+    # Compute text bounding box so we can draw a background rectangle
     margin = 10
     bbox = draw.multiline_textbbox((margin, margin), text)
     x0, y0, x1, y1 = bbox
@@ -112,7 +111,6 @@ def build_val_loader() -> DataLoader:
         transform=get_transforms(),
     )
 
-
     val_size = int(VAL_SPLIT_RATIO * len(full_dataset))
     train_size = len(full_dataset) - val_size
 
@@ -129,7 +127,7 @@ def build_val_loader() -> DataLoader:
 
 
 def load_model(device: torch.device) -> ResNetCounter:
-    #initialize ResNetCounter and load weights from checkpoint
+    # Initialize ResNetCounter and load weights from checkpoint
 
     model = ResNetCounter().to(device)
 
@@ -140,13 +138,13 @@ def load_model(device: torch.device) -> ResNetCounter:
 
 
 def main():
-    # ensure output directory exists
+    # Ensure output directory exists
     Path(OUT_DIR).mkdir(parents=True, exist_ok=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device for visualization: {device}")
 
-    #Load our model
+    # Load our model
     if not os.path.exists(CHECKPOINT_PATH):
         raise FileNotFoundError(
             f"Checkpoint not found at '{CHECKPOINT_PATH}'. "
@@ -156,7 +154,7 @@ def main():
     model = load_model(device)
     print(f"Loaded model weights from: {CHECKPOINT_PATH}")
 
-    #validation loader
+    # Validation loader
     val_loader = build_val_loader()
 
     saved = 0
@@ -165,7 +163,7 @@ def main():
             if saved >= NUM_SAMPLES:
                 break
 
-            #REFERENCE: images: [1, 3, H, W] //// targets: [1, 1]
+            # REFERENCE: images: [1, 3, H, W] //// targets: [1, 1]
             images = images.to(device)
             targets = targets.to(device)
 
@@ -173,12 +171,12 @@ def main():
             pred_value = float(outputs[0, 0].cpu().item())
             target_value = float(targets[0, 0].cpu().item())
 
-            #to PIL
+            # To PIL
             img_tensor = images[0].cpu()
             original_pil = tensor_to_pil(img_tensor)
             annotated_pil = add_prediction_text(original_pil, pred_value, target_value)
 
-            #make the pane
+            # Make the pane
             panel = make_panel(original_pil, annotated_pil)
             out_path = os.path.join(OUT_DIR, f"sample_{saved:02d}.png")
             panel.save(out_path)
