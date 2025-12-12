@@ -25,8 +25,8 @@ import matplotlib.pyplot as plt
 import os
 
 # Import custom modules
-from data import ParkingDataset, get_transforms
-from model import ResNetCounter
+from data_src.data import ParkingDataset, get_transforms, LOT_CAPACITIES
+from model_src.model import ResNetCounter
 
 # Hyperparameters and Paths
 CSV_FILE = '/home/bchidley/CS366-Final/labels/car_counts.csv'
