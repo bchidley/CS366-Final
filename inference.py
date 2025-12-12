@@ -3,6 +3,8 @@ inference.py
 Run this script to generate predictions on new images:
 
 python inference.py --data professor_samples/
+
+Assistance from Gemini: https://docs.google.com/document/d/1c_gnNwld4Dh0-7vMMfJdT_MRQFHenCo5vUi6aq_Q7zA/edit?usp=sharing
 """
 import torch
 from PIL import Image
@@ -18,8 +20,7 @@ from data_src.data import get_transforms, LOT_CAPACITIES
 # --- CONFIGURATION ---
 MODEL_PATH = "resnet50_parking_best.pth" 
 
-# --- HARDCODED CAR COUNTS FOR PROFESSOR EXAMPLES ---
-# Mapping: Filename -> Detected Car Count (from your CSV)
+
 PROFESSOR_CAR_COUNTS = {
     "MMM1_day_000257.jpg": 64,
     "North1_day_000087.jpg": 46,
@@ -37,11 +38,6 @@ PROFESSOR_CAR_COUNTS = {
 def load_model(model_path, device):
     """Loads the trained model architecture and weights."""
     model = ResNetCounter().to(device)
-    
-    if not os.path.exists(model_path):
-        print(f"Error: Model weights not found at '{model_path}'")
-        print("Please train the model first.")
-        sys.exit(1)
         
     state_dict = torch.load(model_path, map_location=device)
     model.load_state_dict(state_dict)
@@ -52,81 +48,49 @@ def get_lot_capacity(image_path):
     """Determines lot capacity based on keywords in the filename."""
     filename = os.path.basename(image_path)
     for key, cap in LOT_CAPACITIES.items():
-        if key in filename:
-            return cap
-    return 100
+        return cap
 
 def get_ground_truth_cars(filename, df):
     """Looks up the actual car count from the provided DataFrame."""
-    if df is None:
-        return None
-    
-    # 1. Try matching the 'Filename' column directly
-    if 'Filename' in df.columns:
-        match = df[df['Filename'].astype(str).str.endswith(filename)]
-        if not match.empty:
-            return int(match.iloc[0]['Car_Count'])
-
-    # 2. Fallback: Search 'Full_Path' for the filename
-    if 'Full_Path' in df.columns:
-        match = df[df['Full_Path'].astype(str).str.contains(filename, regex=False)]
-        if not match.empty:
-            return int(match.iloc[0]['Car_Count'])
-            
+    match = df[df['Filename'].astype(str).str.endswith(filename)]
     return None
 
 def predict_image(model, image_path, transform, device, labels_df=None):
     """Runs inference and compares with ground truth if available."""
-    try:
-        image = Image.open(image_path).convert("RGB")
-        image_tensor = transform(image).unsqueeze(0).to(device)
+    image = Image.open(image_path).convert("RGB")
+    image_tensor = transform(image).unsqueeze(0).to(device)
         
-        with torch.no_grad():
-            output = model(image_tensor)
-            predicted_spots_raw = output.item()
+    with torch.no_grad():
+        output = model(image_tensor)
+        predicted_spots_raw = output.item()
 
-        total_capacity = get_lot_capacity(image_path)
+    total_capacity = get_lot_capacity(image_path)
         
         # Post-process prediction
-        predicted_spots_rounded = int(round(predicted_spots_raw))
-        predicted_spots_rounded = max(0, min(predicted_spots_rounded, total_capacity))
+    predicted_spots_rounded = int(round(predicted_spots_raw))
+    predicted_spots_rounded = max(0, min(predicted_spots_rounded, total_capacity))
 
         # --- RETRIEVE GROUND TRUTH CAR COUNT ---
-        filename = os.path.basename(image_path)
-        actual_cars = None
+    filename = os.path.basename(image_path)
+    actual_cars = None
 
-        if labels_df is not None:
-            actual_cars = get_ground_truth_cars(filename, labels_df)
+    actual_cars = PROFESSOR_CAR_COUNTS[filename]
+
         
-        if actual_cars is None:
-            if filename in PROFESSOR_CAR_COUNTS:
-                actual_cars = PROFESSOR_CAR_COUNTS[filename]
-            else:
-                for k, v in PROFESSOR_CAR_COUNTS.items():
-                    if filename in k: 
-                        actual_cars = v
-                        break
+    # --- CALCULATE TARGET OPEN SPOTS ---
+    target_open_spots = None
+    diff_val = "N/A" # Renamed from 'error' to 'diff_val' to avoid confusion
         
-        # --- CALCULATE TARGET OPEN SPOTS ---
-        target_open_spots = None
-        diff_val = "N/A" # Renamed from 'error' to 'diff_val' to avoid confusion
-        
-        if actual_cars is not None:
-            target_open_spots = max(0, total_capacity - actual_cars)
-            diff_val = predicted_spots_rounded - target_open_spots
+    target_open_spots = max(0, total_capacity - actual_cars)
+    diff_val = predicted_spots_rounded - target_open_spots
 
-        return {
-            "file": filename,
-            "capacity": total_capacity,
-            "pred": predicted_spots_rounded,
-            "target": target_open_spots,
-            "diff": diff_val # Store numerical difference here
-        }
-
-    except Exception as e:
-        # Only return 'error' key if an actual exception occurred
-        return {"error": str(e), "file": os.path.basename(image_path)}
-
+    return {
+        "file": filename,
+        "capacity": total_capacity,
+        "pred": predicted_spots_rounded,
+        "target": target_open_spots,
+        "diff": diff_val # Store numerical difference here
+    }
 def main():
     parser = argparse.ArgumentParser(description="Parking Spot Counter Inference")
     parser.add_argument("--data", type=str, required=True, 
@@ -149,23 +113,14 @@ def main():
         else:
             print(f"Warning: CSV file not found at {args.csv}. Running without ground truth.")
 
-    if os.path.isfile(args.data):
-        image_paths = [args.data]
-    elif os.path.isdir(args.data):
-        valid_exts = ('.jpg', '.jpeg', '.png', '.bmp')
-        image_paths = [
-            os.path.join(args.data, f) for f in os.listdir(args.data) 
-            if f.lower().endswith(valid_exts)
-        ]
-        image_paths.sort()
-        if not image_paths:
-            print(f"No valid images found in directory: {args.data}")
-            return
-    else:
-        print(f"Error: Invalid path '{args.data}'")
-        return
 
-    # Run Prediction Loop
+    valid_exts = ('.jpg', '.jpeg', '.png', '.bmp')
+    image_paths = [
+        os.path.join(args.data, f) for f in os.listdir(args.data) 
+        if f.lower().endswith(valid_exts)
+    ]
+    image_paths.sort()
+
     print(f"\nProcessing {len(image_paths)} images...\n")
     
     header = f"{'Filename':<35} | {'Pred':<5} | {'Target':<6} | {'Error'}"
