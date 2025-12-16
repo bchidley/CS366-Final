@@ -1,6 +1,10 @@
 """
 inference.py
-Run this script to generate predictions on new images.
+Run this script to generate predictions on new images:
+
+python inference.py --data professor_samples/
+
+Assistance from Gemini: https://docs.google.com/document/d/1c_gnNwld4Dh0-7vMMfJdT_MRQFHenCo5vUi6aq_Q7zA/edit?usp=sharing
 """
 import torch
 from PIL import Image
@@ -32,7 +36,7 @@ LOT_CAPACITIES = {
 
 # --- HARDCODED CAR COUNTS FOR PROFESSOR EXAMPLES ---
 PROFESSOR_CAR_COUNTS = {
-    "MMM1_day_000257.jpg": 63,
+    "MMM1_day_000257.jpg": 64,
     "North1_day_000087.jpg": 46,
     "North2_day_000356.jpg": 46,
     "North2_night_000081.jpg": 48,
