@@ -36,7 +36,7 @@ LOT_CAPACITIES = {
 
 # --- HARDCODED CAR COUNTS FOR PROFESSOR EXAMPLES ---
 PROFESSOR_CAR_COUNTS = {
-    "MMM1_day_000257.jpg": 64,
+    "MMM1_day_000257.jpg": 63,
     "North1_day_000087.jpg": 46,
     "North2_day_000356.jpg": 46,
     "North2_night_000081.jpg": 48,
