@@ -19,8 +19,10 @@ import pandas as pd
 from torchvision import transforms
 
 LOT_CAPACITIES = {
-    'Tennis1': 36, 'Tennis2': 36, 'MMM1': 64, 'MMM2': 64,
-    'North1': 53, 'North2': 89, 'Root1': 77, 'Root2': 77, 'RootStaff': 41
+    'Tennis1': 36, 'Tennis2': 36, 
+    'MMM1': 64, 'MMM2': 64,
+    'North1': 53, 'North2': 89, 'Root1': 77, 
+    'Root2': 77, 'RootStaff': 41
 }
 
 FOLDER_TO_MASK = {

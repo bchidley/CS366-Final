@@ -36,7 +36,7 @@ MASK_DIR = '/home/bchidley/CS366-Final/gpu_data/masks'
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-4
 EPOCHS = 15
-ZERO_SPOT_WEIGHT = 10.0
+ZERO_SPOT_WEIGHT = 15.0
 
 class WeightedMSELoss(nn.Module):
     def __init__(self, zero_weight=10.0):
@@ -138,13 +138,8 @@ def main():
         if epochs_no_improve >= patience:
             print("Early stopping triggered.")
             break
-        
-        # Save checkpoint every 5 epochs
-        if (epoch + 1) % 5 == 0:
-            torch.save(model.state_dict(), f"resnet50_parking_epoch{epoch+1}.pth")
 
-    # Save final model
-    torch.save(model.state_dict(), "resnet50_parking_final.pth")
+    torch.save(model.state_dict(), "resnet50_parking_best.pth")
     print("Training Complete. Generating Scatter Plot...")
     
     # Plotting
